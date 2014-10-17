@@ -153,15 +153,13 @@ version="1.31"
 
 # No point going any farther if we're not running correctly...
 if [ `whoami` != 'root' -a "$1" != "--list" ]; then
-  echo "virtualhost.sh requires super-user privileges to work."
-  echo "Enter your password to continue..."
+  printf "virtualhost.sh requires super-user privileges to work.\nEnter your password to continue...\n"
   sudo -E "$0" $* || exit 1
   exit 0
 fi
 
 if [ "$SUDO_USER" = "root" -a "$1" != "--list" ]; then
-  /bin/echo "You must start this under your regular user account (not root) using sudo."
-  /bin/echo "Rerun using: sudo $0 $*"
+  printf "You must start this under your regular user account (not root) using sudo.\nRerun using: sudo %s %s\n" "$0" "$*"
   exit 1
 fi
 
@@ -338,8 +336,7 @@ __EOF
 
 cleanup()
 {
-  /bin/echo
-  /bin/echo "Cleaning up..."
+  printf "\nCleaning up...\n"
   exit
 }
 
@@ -365,7 +362,7 @@ checkyesno()
 
 version_check()
 {
-  /bin/echo -n "Checking for updates... "
+  printf "Checking for updates... "
   current_version=`dig +tries=1 +time=1 +retry=0 txt virtualhost.patrickgibson.com | grep -e '^virtualhost' | awk '{print $5}' | sed -e 's/"//g'`
 
   # See if we have the latest version
@@ -373,14 +370,13 @@ version_check()
     testes=`/bin/echo "$version < $current_version" | /usr/bin/bc`
 
     if [ $testes -eq 1 ]; then
-      /bin/echo "done"
+      printf "done\n"
+      printf "A newer version (%s) of virtualhost.sh is available.\n" "$current_version"
       if [ -z $BATCH_MODE ]; then
-        /bin/echo "A newer version ($current_version) of virtualhost.sh is available."
-        /bin/echo -n "Do you want to get it now? [Y/n] "
+        printf "Do you want to get it now? [Y/n] "
         read resp
       else
-        /bin/echo "A newer version ($current_version) of virtualhost.sh is available."
-        /bin/echo "Visit https://github.com/pgib/virtualhost.sh to go get it."
+        printf "Visit https://github.com/pgib/virtualhost.sh to go get it.\n"
         resp="n"
       fi
 
@@ -391,15 +387,14 @@ version_check()
       ;;
 
       *)
-        /bin/echo "Okay. At your convenience, visit: https://github.com/pgib/virtualhost.sh"
-        /bin/echo
+        printf "Okay. At your convenience, visit: https://github.com/pgib/virtualhost.sh\n\n"
       ;;
       esac
     else
-      /bin/echo "none found"
+      printf "none found\n"
     fi
   else
-    /bin/echo "failed. Are you online?"
+    printf "failed. Are you online?\n"
   fi
 }
 
@@ -407,11 +402,8 @@ version_check()
 
 # Make sure this is an Apache 2.x / Leopard machine
 if [ ! -d $APACHE_CONFIG ]; then
-  /bin/echo "Could not find ${APACHE_CONFIG}"
-  /bin/echo "Sorry, this version of virtualhost.sh only works with Leopard. You can download an older version which works with previous versions of Mac OS X here:"
-  /bin/echo
-  /bin/echo "http://patrickgibson.com/news/andsuch/virtualhost.tgz"
-  /bin/echo
+  printf "Could not find %s" "${APACHE_CONFIG}\n"
+  printf "Sorry, this version of virtualhost.sh only works with Leopard. You can download an older version which works with previous versions of Mac OS X here:\n\nhttp://patrickgibson.com/news/andsuch/virtualhost.tgz\n\n"
 
   exit 1
 fi
@@ -432,17 +424,17 @@ if [ -z $USER -o $USER = "root" ]; then
   else
     USER=""
 
-    /bin/echo "ALERT! Your root shell did not provide your username."
+    printf "ALERT! Your root shell did not provide your username.\n"
 
     while : ; do
       if [ -z $USER ]; then
         while : ; do
-          /bin/echo -n "Please enter *your* username: "
+          printf "Please enter *your* username: "
           read USER
           if [ -d $HOME_PARTITION/$USER ]; then
             break
           else
-            /bin/echo "$USER is not a valid username."
+            printf "%s is not a valid username.\n" "$USER"
           fi
         done
       else
@@ -483,15 +475,14 @@ else
     fi
   elif [ "$1" = "--list" ]; then
     if [ -d $APACHE_CONFIG/virtualhosts ]; then
-      echo "Listing virtualhosts found in $APACHE_CONFIG/virtualhosts"
-      echo
+      printf "Listing virtualhosts found in %s\n\n" "$APACHE_CONFIG/virtualhosts"
       for i in $APACHE_CONFIG/virtualhosts/*; do
         server_name=`grep ServerName $i | awk '{print $2}'`
         doc_root=`grep DocumentRoot $i | awk '{print $2}' | sed -e 's/"//g'`
-        echo "http://${server_name}/ -> ${doc_root}"
+        printf "http://%s/ -> %s\n" "${server_name}" "${doc_root}"
       done
     else
-      echo "No virtualhosts have been set up yet."
+      printf "No virtualhosts have been set up yet.\n"
     fi
 
     exit
@@ -503,7 +494,7 @@ fi
 
 # Test that the virtualhost name is valid (starts with a number or letter)
 if ! /bin/echo $VIRTUALHOST | grep -q -E '^[A-Za-z0-9]+[A-Za-z0-9.-]+$' ; then
-  /bin/echo "Sorry, '$VIRTUALHOST' is not a valid host name to use. It must start with a letter or number."
+  printf "Sorry, '%s' is not a valid host name to use. It must start with a letter or number.\n" "$VIRTUALHOST"
   exit 1
 fi
 
@@ -511,13 +502,13 @@ fi
 # Delete the virtualhost if that's the requested action
 #
 if [ ! -z $DELETE ]; then
-  /bin/echo -n "- Deleting virtualhost, $VIRTUALHOST... Continue? [Y/n]: "
+  printf " - Deleting virtualhost, %s... Continue? [Y/n]: " "$VIRTUALHOST"
 
   if [ -z "$BATCH_MODE" ]; then
     read continue
   else
     continue="Y"
-    /bin/echo $continue
+    printf "%s\n" "$continue"
   fi
 
   case $continue in
@@ -525,36 +516,36 @@ if [ ! -z $DELETE ]; then
   esac
 
   if ! checkyesno ${SKIP_ETC_HOSTS}; then
-    /bin/echo -n "  - Removing $VIRTUALHOST from /etc/hosts... "
+    printf "  - Removing %s from /etc/hosts... " "$VIRTUALHOST"
 
     cat /etc/hosts | grep -v $VIRTUALHOST > /tmp/hosts.tmp
 
     if [ -s /tmp/hosts.tmp ]; then
       mv /tmp/hosts.tmp /etc/hosts
     fi
-    /bin/echo "done"
+    printf "done\n"
   fi
 
   if [ -e $APACHE_CONFIG/virtualhosts/$VIRTUALHOST ]; then
     DOCUMENT_ROOT=`grep DocumentRoot $APACHE_CONFIG/virtualhosts/$VIRTUALHOST | awk '{print $2}' | tr -d '"'`
 
     if [ -d $DOCUMENT_ROOT ]; then
-      /bin/echo -n "  + Found DocumentRoot $DOCUMENT_ROOT. Delete this folder? [y/N]: "
+      printf "  + Found DocumentRoot %s. Delete this folder? [y/N]: " "$DOCUMENT_ROOT"
 
       if [ -z $BATCH_MODE ]; then
         read resp
       else
         resp="n"
-        echo $resp
+        printf "%s\n" "$resp"
       fi
 
       case $resp in
       y*|Y*)
-        /bin/echo -n "  - Deleting folder... "
+        printf "  - Deleting folder... "
         if rm -rf "${DOCUMENT_ROOT}" ; then
-          /bin/echo "done"
+          printf "done\n"
         else
-          /bin/echo "Could not delete $DOCUMENT_ROOT"
+          printf "Could not delete %s\n" "$DOCUMENT_ROOT"
         fi
       ;;
       esac
@@ -562,36 +553,36 @@ if [ ! -z $DELETE ]; then
 
     LOG_FILES=`grep "CustomLog\|ErrorLog" $APACHE_CONFIG/virtualhosts/$VIRTUALHOST | awk '{print $2}' | tr -d '"'`
     if [ ! -z "$LOG_FILES" ]; then
-      /bin/echo -n "  + Delete logs? [y/N]: "
+      printf "  + Delete logs? [y/N]: "
 
       if [ -z BATCH_MODE ]; then
         read resp
       else
         resp="n"
-        echo $resp
+        printf "%s\n" "$resp"
       fi
 
       case $resp in
       y*|Y*)
-        /bin/echo -n "  - Deleting logs... "
+        printf "  - Deleting logs... "
         if rm -f ${LOG_FILES} ; then
-          /bin/echo "done"
+          printf "done\n"
         else
-          /bin/echo "Could not delete $LOG_FILES"
+          printf "Could not delete %s\n" "$LOG_FILES"
         fi
       ;;
       esac
     fi
 
-    /bin/echo -n "  - Deleting virtualhost file, $APACHE_CONFIG/virtualhosts/$VIRTUALHOST... "
+    printf "  - Deleting virtualhost file, %s... " "$APACHE_CONFIG/virtualhosts/$VIRTUALHOST"
     rm $APACHE_CONFIG/virtualhosts/$VIRTUALHOST
-    /bin/echo "done"
+    printf "done\n"
 
-    /bin/echo -n "+ Restarting Apache... "
+    printf "+ Restarting Apache... "
     $APACHECTL graceful 1>/dev/null 2>/dev/null
-    /bin/echo "done"
+    printf "done\n"
   else
-    /bin/echo "- Virtualhost $VIRTUALHOST does not currently exist. Aborting..."
+    printf " - Virtualhost %s does not currently exist. Aborting...\n" "$VIRTUALHOST"
     exit 1
   fi
 
@@ -613,8 +604,7 @@ fi
 
 if ! checkyesno ${SKIP_DOCUMENT_ROOT_CHECK} ; then
   if ! grep -q -e "^DocumentRoot \"$DOC_ROOT_PREFIX\"" $APACHE_CONFIG/httpd.conf ; then
-    /bin/echo "httpd.conf's DocumentRoot does not point where it should."
-    /bin/echo -n "Do you with to set it to $DOC_ROOT_PREFIX? [Y/n]: "
+    printf "httpd.conf's DocumentRoot does not point where it should.\nDo you wish to set it to %s? [Y/n]: " "$DOC_ROOT_PREFIX"
     if [ -z $BATCH_MODE ]; then
       read response
     else
@@ -622,7 +612,7 @@ if ! checkyesno ${SKIP_DOCUMENT_ROOT_CHECK} ; then
     fi
     case $response in
     n*|N*)
-      /bin/echo "Okay, just re-run this script if you change your mind."
+      printf "Okay, just re-run this script if you change your mind.\n"
     ;;
     *)
       cat << __EOT | ed $APACHE_CONFIG/httpd.conf 1>/dev/null 2>/dev/null
@@ -645,16 +635,16 @@ fi
 
 if ! grep -q -E "^NameVirtualHost \*:$APACHE_PORT" $APACHE_CONFIG/httpd.conf ; then
 
-  /bin/echo "httpd.conf not ready for virtual hosting. Fixing..."
+  printf "httpd.conf not ready for virtual hosting. Fixing...\n"
   cp $APACHE_CONFIG/httpd.conf $APACHE_CONFIG/httpd.conf.original
-  /bin/echo "NameVirtualHost *:$APACHE_PORT" >> $APACHE_CONFIG/httpd.conf
+  printf "NameVirtualHost *:%s\n" "$APACHE_PORT" >> $APACHE_CONFIG/httpd.conf
 
   if [ ! -d $APACHE_CONFIG/virtualhosts ]; then
     mkdir $APACHE_CONFIG/virtualhosts
     create_virtualhost localhost $DOC_ROOT_PREFIX
   fi
 
-  /bin/echo "Include $APACHE_CONFIG/virtualhosts"  >> $APACHE_CONFIG/httpd.conf
+  printf "Include %s\n" "$APACHE_CONFIG/virtualhosts" >> $APACHE_CONFIG/httpd.conf
 
 fi
 
@@ -664,24 +654,24 @@ fi
 #
 if [ -d /etc/httpd/virtualhosts ]; then
 
-  /bin/echo -n "Do you want to port the hosts you previously created in Tiger to the new system? [Y/n]: "
+  printf "Do you want to port the hosts you previously created in Tiger to the new system? [Y/n]: "
   read PORT_HOSTS
   case $PORT_HOSTS in
   n*|N*)
-    /bin/echo "Okay, just re-run this script if you change your mind."
+    printf "Okay, just re-run this script if you change your mind.\n"
   ;;
 
   *)
     for host in `ls -1 /etc/httpd/virtualhosts | grep -v _localhost`; do
-      /bin/echo -n "  + Creating $host... "
+      printf "  + Creating %s... " "$host"
       if ! checkyesno ${SKIP_ETC_HOSTS}; then
         if ! host_exists $host ; then
-          /bin/echo "$IP_ADDRESS  $host" >> /etc/hosts
+          printf "%s  %s\n" "$IP_ADDRESS" "$host" >> /etc/hosts
         fi
       fi
       docroot=`grep DocumentRoot /etc/httpd/virtualhosts/$host | awk '{print $2}'`
       create_virtualhost $host $docroot
-      /bin/echo "done"
+      printf "done\n"
     done
 
     mv /etc/httpd/virtualhosts /etc/httpd/virtualhosts-ported
@@ -692,16 +682,18 @@ if [ -d /etc/httpd/virtualhosts ]; then
 fi
 
 if [ -z $WILDCARD_ZONE ]; then
-  /bin/echo -n "Create http://${VIRTUALHOST}:${APACHE_PORT}/? [Y/n]: "
+  host="${VIRTUALHOST}:${APACHE_PORT}"
 else
-  /bin/echo -n "Create http://${VIRTUALHOST}.${WILDCARD_ZONE}:${APACHE_PORT}/? [Y/n]: "
+  host="${VIRTUALHOST}.${WILDCARD_ZONE}:${APACHE_PORT}"
 fi
+
+printf "Create http://%s/? [Y/n]: " "$host"
 
 if [ -z "$BATCH_MODE" ]; then
   read continue
 else
   continue="Y"
-  /bin/echo $continue
+  printf "%s\n" "$continue"
 fi
 
 case $continue in
@@ -716,10 +708,10 @@ esac
 if ! checkyesno ${SKIP_ETC_HOSTS}; then
   if ! host_exists $VIRTUALHOST ; then
 
-    /bin/echo "Creating a virtualhost for $VIRTUALHOST..."
-    /bin/echo -n "+ Adding $VIRTUALHOST to /etc/hosts... "
-    /bin/echo "$IP_ADDRESS  $VIRTUALHOST" >> /etc/hosts
-    /bin/echo "done"
+    printf "Creating a virtualhost for %s...\n" "$VIRTUALHOST"
+    printf "+ Adding %s to /etc/hosts... " "$VIRTUALHOST"
+    printf "%s  %s\n" "$IP_ADDRESS" "$VIRTUALHOST" >> /etc/hosts
+    printf "done\n"
   fi
 fi
 
@@ -729,7 +721,7 @@ fi
 # if a document root hasn't been specified as a second argument.
 #
 if [ -z "$FOLDER" ]; then
-  /bin/echo "+ Looking in $DOC_ROOT_PREFIX for an existing document root to use..."
+  printf "+ Looking in %s for an existing document root to use...\n" "$DOC_ROOT_PREFIX"
 
   # See if we can find an appropriate folder
   if ls -1 $DOC_ROOT_PREFIX | grep -q -e "^$VIRTUALHOST"; then
@@ -740,9 +732,9 @@ if [ -z "$FOLDER" ]; then
       DOC_ROOT_FOLDER_MATCH="$DOC_ROOT_PREFIX/$VIRTUALHOST"
     else
       if [ $MAX_SEARCH_DEPTH -eq 0 ]; then
-        /bin/echo -n " searching with no a maximum depth. This could take a really long time..."
+        printf " searching with no maximum depth. This could take a really long time...\n"
       else
-        /bin/echo -n " searching to a maximum directory depth of $MAX_SEARCH_DEPTH. This could take some time..."
+        printf " searching to a maximum directory depth of %s. This could take some time...\n" "$MAX_SEARCH_DEPTH"
       fi
       nested_match=`find $DOC_ROOT_PREFIX -maxdepth $MAX_SEARCH_DEPTH -type d -name $VIRTUALHOST 2>/dev/null`
 
@@ -756,13 +748,13 @@ if [ -z "$FOLDER" ]; then
     fi
   fi
 
-/bin/echo "  - Use $DOC_ROOT_FOLDER_MATCH as the virtualhost folder? [Y/n] "
+printf "  - Use %s as the virtualhost folder? [Y/n] \n" "$DOC_ROOT_FOLDER_MATCH"
 
   if [ -z "$BATCH_MODE" ]; then
     read resp
   else
     resp="Y"
-    echo $resp
+    printf "%s\n" "$resp"
   fi
 
   case $resp in
@@ -770,7 +762,7 @@ if [ -z "$FOLDER" ]; then
     n*|N*)
       while : ; do
         if [ -z "$FOLDER" ]; then
-          /bin/echo -n "  - Enter new folder name (located in $DOC_ROOT_PREFIX): "
+          printf "  - Enter new folder name (located in %s): " "$DOC_ROOT_PREFIX"
           read FOLDER
         else
           break
@@ -780,12 +772,12 @@ if [ -z "$FOLDER" ]; then
 
     *)
       if [ -d $DOC_ROOT_FOLDER_MATCH/public ]; then
-        /bin/echo -n "  - Found a public folder suggesting a Rails/Rack project. Use as DocumentRoot? [Y/n] "
+        printf "  - Found a public folder suggesting a Rails/Rack project. Use as DocumentRoot? [Y/n] "
         if [ -z "$BATCH_MODE" ]; then
           read response
         else
           response="Y"
-          echo $response
+          printf "%s\n" "$response"
         fi
         if checkyesno ${response} ; then
           FOLDER=$DOC_ROOT_FOLDER_MATCH/public
@@ -793,12 +785,12 @@ if [ -z "$FOLDER" ]; then
           FOLDER=$DOC_ROOT_FOLDER_MATCH
         fi
       elif [ -d $DOC_ROOT_FOLDER_MATCH/web ]; then
-        /bin/echo -n "  - Found a web folder suggesting a Symfony project. Use as DocumentRoot? [Y/n] "
+        printf "  - Found a web folder suggesting a Symfony project. Use as DocumentRoot? [Y/n] "
         if [ -z "$BATCH_MODE" ]; then
           read response
         else
           response="Y"
-          echo $response
+          printf "%s\n" "$response"
         fi
         if checkyesno ${response} ; then
           FOLDER=$DOC_ROOT_FOLDER_MATCH/web
@@ -814,9 +806,9 @@ fi
 
 # Create the folder if we need to...
 if [ ! -d "${FOLDER}" ]; then
-  /bin/echo -n "  + Creating folder ${FOLDER}... "
+  printf "  + Creating folder %s... " "${FOLDER}"
   su $USER -c "mkdir -p $FOLDER"
-  /bin/echo "done"
+  printf "done\n"
 fi
 
 
@@ -825,7 +817,7 @@ fi
 #
 if checkyesno ${PROMPT_FOR_LOGS}; then
 
-  /bin/echo -n "  - Enable custom server access and error logs in $VIRTUALHOST/logs? [y/N] "
+  printf "  - Enable custom server access and error logs in %s? [y/N] " "$VIRTUALHOST/logs"
 
   if [ -z "$BATCH_MODE" ]; then
     read resp
@@ -857,7 +849,7 @@ fi
 #
 if checkyesno ${CREATE_INDEX}; then
   if [ ! -e "${FOLDER}/index.html" -a ! -e "${FOLDER}/index.php" ]; then
-    /bin/echo -n "+ Creating 'index.html'... "
+    printf "+ Creating 'index.html'... "
     cat << __EOF >"${FOLDER}/index.html"
 <html>
 <head>
@@ -913,7 +905,7 @@ if checkyesno ${CREATE_INDEX}; then
 </body>
 </html>
 __EOF
-    /bin/echo "done"
+    printf "done\n"
     chown $USER "${FOLDER}/index.html"
   fi
 fi
@@ -922,27 +914,27 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create a default virtualhost file
 #
-/bin/echo -n "+ Creating virtualhost file... "
+printf "+ Creating virtualhost file... "
 create_virtualhost $VIRTUALHOST "${FOLDER}" $log
-/bin/echo "done"
+printf "done\n"
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Restart apache for the changes to take effect
 #
 if [ -x /usr/bin/dscacheutil ]; then
-  /bin/echo -n "+ Flushing cache... "
+  printf "+ Flushing cache... "
   dscacheutil -flushcache
-  /bin/echo "done"
+  printf "done\n"
 
   dscacheutil -q host | grep -q $VIRTUALHOST
 
   sleep 1
 fi
 
-/bin/echo -n "+ Restarting Apache... "
+printf "+ Restarting Apache... "
 $APACHECTL graceful 1>/dev/null 2>/dev/null
-/bin/echo "done"
+printf "done\n"
 
 cat << __EOF
 
@@ -955,9 +947,9 @@ __EOF
 # Launch the new URL in the browser
 #
 if [ -z $SKIP_BROWSER ]; then
-  /bin/echo -n "Launching virtualhost... "
+  printf "Launching virtualhost... "
   sleep 1
   curl --silent http://$VIRTUALHOST:$APACHE_PORT/ 2>&1 >/dev/null
   open_command "http://$VIRTUALHOST:$APACHE_PORT/"
-  /bin/echo "done"
+  printf "done\n"
 fi
