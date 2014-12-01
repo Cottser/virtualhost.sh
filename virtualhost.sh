@@ -478,6 +478,88 @@ version_check()
   fi
 }
 
+check_apache_2_4()
+{
+  # Skip the update check if the install has been marked as compatible.
+  if [ -f "${HOME_PARTITION}/$USER/.virtualhost.sh/apache_2_4_compatible" ]; then
+    exit
+  fi
+
+  if ! grep -r -q -e "Order allow,deny\|Allow from all" "$APACHE_CONFIG/virtualhosts" ; then
+    mark_updated_to_apache_2_4
+  else
+    BACKUP_LOCATION="${HOME_PARTITION}/$USER/.virtualhost.sh/pre_apache_2_4_backups"
+
+    /bin/echo "VirtualHosts not fully compatible with Apache 2.4.x were found."
+    /bin/echo "virtualhost.sh can upgrade them for you automatically."
+    /bin/echo
+    /bin/echo "Before upgrading, all your VirtualHosts will be backed up to:"
+    /bin/echo "$BACKUP_LOCATION"
+    /bin/echo
+    /bin/echo -n "Do you want to upgrade your VirtualHosts now? [Y/n] "
+    read resp
+
+    case $resp in
+    n*|N*)
+      /bin/echo -n "Okay. Do you want to be asked again later to upgrade? [Y/n] "
+      read resp
+
+      case $resp in
+      n*|N*)
+        mark_updated_to_apache_2_4
+      ;;
+      esac
+      exit
+    ;;
+
+    *)
+      upgrade_hosts_to_apache_2_4 $@
+    ;;
+    esac
+  fi
+}
+
+upgrade_hosts_to_apache_2_4()
+{
+  if [ ! -d "$BACKUP_LOCATION" ]; then
+    # Set up the directory for storing backups if it's not there yet.
+    mkdir "$BACKUP_LOCATION"
+  fi
+
+  /bin/echo "+ Backing up existing VirtualHosts to:"
+  /bin/echo "$BACKUP_LOCATION"
+  /bin/echo
+  for i in $APACHE_CONFIG/virtualhosts/*; do
+    cp "$i" "$BACKUP_LOCATION"
+  done
+
+  /bin/echo "+ Upgrading VirtualHosts... "
+  # The 0777 parameter is for multiline search and replace.
+  perl -0777 -pi -e 's/Order allow,deny\s*Allow from all/Require all granted/' $APACHE_CONFIG/virtualhosts/*
+
+  mark_updated_to_apache_2_4
+
+  /bin/echo -n "+ Restarting Apache... "
+  $APACHECTL graceful 1>/dev/null 2>/dev/null
+  /bin/echo "done"
+
+  # If no additional parameters were passed, exit out early.
+  if [ -z $1 ]; then
+    exit 1
+  fi
+
+  /bin/echo
+}
+
+mark_updated_to_apache_2_4()
+{
+  if [ ! -d "${HOME_PARTITION}/$USER/.virtualhost.sh" ]; then
+    # Set up the directory for storing the update file if it's not there yet.
+    mkdir "${HOME_PARTITION}/$USER/.virtualhost.sh"
+  fi
+  touch "${HOME_PARTITION}/$USER/.virtualhost.sh/apache_2_4_compatible"
+}
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Get the Apache version number to check compatibility.
@@ -538,6 +620,10 @@ fi
 
 if [ -z $SKIP_VERSION_CHECK ]; then
   version_check
+fi
+
+if (( $APACHE_MAJOR_VERSION >= 2 )) && (( $APACHE_MINOR_VERSION >= 4 )); then
+  check_apache_2_4 $@
 fi
 
 usage()
